@@ -1,0 +1,22 @@
+# Miga is migrate tool
+# This is default configuration (template), you can change everything
+# with environment
+
+# Using https://github.com/im-kulikov/migrate driver
+driver: impg
+
+postgres:
+  user: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  db: simplinic-task
+  options: sslmode=disable
+
+migrate:
+  path: ./migrations/
+  table_name: migrations
+
+seed:
+  path: ./seeds/
+  table_name: seeds

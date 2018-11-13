@@ -1,0 +1,37 @@
+# This is default configuration (template), you can change everything
+# with environment
+
+pprof:
+  address: :6060
+
+metrics:
+  address: :8090
+
+api:
+  address: :8080
+  shutdown_timeout: 10s
+
+logger:
+  level: debug
+  format: console
+
+workers:
+  users_sync:
+    ticker: 30s
+    expire: 1h
+    immediately: true
+
+postgres:
+  address: localhost:5432
+  database: simplinic-task
+  username: postgres
+  password: postgres
+  debug: true
+  pool_size: 10
+
+redis:
+  address: localhost:6379
+  database: 0
+  password:
+  pool_size: 10
+  pool_timeout: 3
