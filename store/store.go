@@ -19,11 +19,11 @@ type (
 	}
 
 	Schemes interface {
-		Create(scheme *models.Scheme) error
-		Read(id int64) (*models.Scheme, error)
-		Update(scheme *models.Scheme) error
-		Delete(scheme *models.Scheme) error
-		Search(req *SearchRequest) ([]*models.Scheme, error)
+		Create(scheme *Scheme) error
+		Read(id int64) (*Scheme, error)
+		Update(scheme *Scheme) error
+		Delete(id int64) error
+		Search(req SearchRequest) ([]*Scheme, error)
 	}
 
 	Configs interface {

@@ -2,16 +2,20 @@ package models
 
 import (
 	"encoding/json"
-
-	"github.com/go-pg/pg"
+	"time"
 )
 
 type Config struct {
-	ID        int64 `pg:",pk"`
+	ID        int64     `pg:",pk"`
+	SchemeID  int64     `sql:"scheme_id"`
+	CreatedAt time.Time `sql:"created_at"`
+	DeletedAt time.Time `pg:",soft_delete"`
+}
+
+type ConfigVersion struct {
+	ConfigID  int64
 	Version   int64
-	SchemesID int64
 	Tags      []string
 	Data      json.RawMessage
-	CreatedAt pg.NullTime
-	DeletedAt pg.NullTime
+	CreatedAt time.Time
 }

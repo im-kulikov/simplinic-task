@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/go-pg/pg"
@@ -22,9 +23,10 @@ var (
 			name: "create",
 			handler: func(g *GomegaWithT, tx orm.DB) error {
 
-				fixture := models.Scheme{
+				fixture := Scheme{
 					Version: 1,
 					Tags:    []string{"a", "b", "c"},
+					Data:    json.RawMessage(`{"hello": "world"}`),
 				}
 
 				s := &schemes{db: tx}
@@ -32,13 +34,16 @@ var (
 				err := s.Create(&fixture)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				items, err := s.Search(&SearchRequest{
-					Version: fixture.Version,
-					Tags:    fixture.Tags,
-				})
+				var items []*models.SchemeVersion
+
+				err = tx.Model(&items).Where("scheme_id = ?",
+					fixture.ID).Select()
 
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(items).To(HaveLen(1))
+				g.Expect(items[0].Version).To(Equal(fixture.Version))
+				g.Expect(items[0].Tags).To(Equal(fixture.Tags))
+				g.Expect(items[0].Data).To(Equal(fixture.Data))
 
 				return rollback
 			},
@@ -49,10 +54,10 @@ var (
 			name: "read",
 			handler: func(g *GomegaWithT, tx orm.DB) error {
 
-				fixture := models.Scheme{
-					ID:      1,
+				fixture := Scheme{
 					Version: 1,
 					Tags:    []string{"a", "b", "c"},
+					Data:    json.RawMessage(`{"hello": "world"}`),
 				}
 
 				s := &schemes{db: tx}
@@ -63,7 +68,7 @@ var (
 				item, err := s.Read(fixture.ID)
 
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(item).NotTo(BeNil())
+				g.Expect(*item).To(Equal(fixture))
 
 				return rollback
 			},
@@ -74,9 +79,10 @@ var (
 			name: "update",
 			handler: func(g *GomegaWithT, tx orm.DB) error {
 
-				fixture := models.Scheme{
+				fixture := Scheme{
 					Version: 1,
 					Tags:    []string{"a", "b", "c"},
+					Data:    json.RawMessage(`{"hello": "world"}`),
 				}
 
 				s := &schemes{db: tx}
@@ -87,15 +93,17 @@ var (
 				err = s.Update(&fixture)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				items, err := s.Search(&SearchRequest{
-					Tags: fixture.Tags,
-				})
+				var items []*Scheme
 
+				err = tx.Model(&items).Where("scheme_id = ?", fixture.ID).Select()
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(items).To(HaveLen(2))
 
-				g.Expect(items[0].Version).To(BeEquivalentTo(1))
-				g.Expect(items[1].Version).To(BeEquivalentTo(2))
+				for i, item := range items {
+					g.Expect(item.Version).To(BeEquivalentTo(i + 1))
+					g.Expect(item.Tags).To(BeEquivalentTo(fixture.Tags))
+					g.Expect(item.Data).To(BeEquivalentTo(fixture.Data))
+				}
 
 				return rollback
 			},
@@ -106,10 +114,10 @@ var (
 			name: "delete",
 			handler: func(g *GomegaWithT, tx orm.DB) error {
 
-				fixture := models.Scheme{
-					ID:      1,
+				fixture := Scheme{
 					Version: 1,
 					Tags:    []string{"a", "b", "c"},
+					Data:    json.RawMessage(`{"hello": "world"}`),
 				}
 
 				s := &schemes{db: tx}
@@ -117,15 +125,20 @@ var (
 				err := s.Create(&fixture)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				err = s.Delete(&fixture)
+				err = s.Delete(fixture.ID)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				items, err := s.Search(&SearchRequest{
-					Tags: fixture.Tags,
-				})
+				var items []*Scheme
 
+				err = tx.Model(&items).Where("scheme_id = ?", fixture.ID).Select()
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(items).To(HaveLen(0))
+				g.Expect(items).To(HaveLen(1))
+
+				for i, item := range items {
+					g.Expect(item.Version).To(BeEquivalentTo(i + 1))
+					g.Expect(item.Tags).To(BeEquivalentTo(fixture.Tags))
+					g.Expect(item.Data).To(BeEquivalentTo(fixture.Data))
+				}
 
 				return rollback
 			},
@@ -135,41 +148,91 @@ var (
 		{
 			name: "search",
 			handler: func(g *GomegaWithT, tx orm.DB) error {
-				fixtures := []*models.Scheme{
+				fixtures := []Scheme{
 					{
-						Version: 1,
-						Tags:    []string{"a", "b", "c"},
+						Tags: []string{"a", "b", "c"},
 					},
 
 					{
-						Version: 2,
-						Tags:    []string{"b", "c", "d"},
+						Tags: []string{"b", "c", "d"},
 					},
 
 					{
-						Version: 3,
-						Tags:    []string{"c", "d", "e"},
+						Tags: []string{"c", "d", "e"},
 					},
 				}
-
-				_, err := tx.Model(&fixtures).Insert()
-				g.Expect(err).NotTo(HaveOccurred())
-
 				s := &schemes{db: tx}
 
-				items, err := s.Search(&SearchRequest{
+				var ids []int64
+
+				for _, item := range fixtures {
+					item.Version = 1
+					err := s.Create(&item)
+					g.Expect(err).NotTo(HaveOccurred())
+
+					ids = append(ids, item.ID)
+				}
+
+				items, err := s.Search(SearchRequest{
 					Tags: []string{"c"},
 				})
 
 				g.Expect(err).NotTo(HaveOccurred())
-
 				g.Expect(items).To(HaveLen(len(fixtures)))
+
+				// Must ignore deleted schemes:
+				for i, id := range ids {
+					err = s.Delete(id)
+					g.Expect(err).NotTo(HaveOccurred())
+
+					items, err := s.Search(SearchRequest{
+						Tags: []string{"c"},
+					})
+
+					g.Expect(err).NotTo(HaveOccurred())
+					g.Expect(items).To(HaveLen(len(fixtures) - 1 - i))
+				}
 
 				return rollback
 			},
 		},
 	}
 )
+
+func TestSchemes_Create(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	h, err := helium.New(&helium.Settings{
+		File:   "../config.yml",
+		Prefix: "TEST",
+	}, testModule)
+
+	g.Expect(err).NotTo(HaveOccurred())
+
+	g.Expect(h.Invoke(func(db *pg.DB) {
+
+		err := db.RunInTransaction(func(tx *pg.Tx) error {
+			s := &schemes{db: tx}
+			err := s.Create(&Scheme{
+				Version: 0,
+				Tags:    []string{"a", "b", "c"},
+				Data:    json.RawMessage(`{"hello": "world"}`),
+			})
+
+			g.Expect(err).NotTo(HaveOccurred())
+
+			var model Scheme
+
+			err = tx.Model(&model).Limit(1).Select()
+			g.Expect(err).NotTo(HaveOccurred())
+
+			return rollback
+		})
+
+		g.Expect(err).To(BeEquivalentTo(rollback))
+
+	})).NotTo(HaveOccurred())
+}
 
 func TestSchemes(t *testing.T) {
 	g := NewGomegaWithT(t)

@@ -1,8 +1,6 @@
 package store
 
 import (
-	"os"
-
 	"github.com/im-kulikov/helium/grace"
 	"github.com/im-kulikov/helium/logger"
 	"github.com/im-kulikov/helium/module"
@@ -20,13 +18,13 @@ var testModule = module.Module{}.Append(
 )
 
 func init() {
-	err := os.Setenv("TEST_POSTGRES_DEBUG", "false")
-	if err != nil {
-		panic(err)
-	}
-
-	err = os.Setenv("TEST_LOGGER_LEVEL", "info")
-	if err != nil {
-		panic(err)
-	}
+	//err := os.Setenv("TEST_POSTGRES_DEBUG", "false")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//
+	//err = os.Setenv("TEST_LOGGER_LEVEL", "info")
+	//if err != nil {
+	//	panic(err)
+	//}
 }
