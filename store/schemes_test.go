@@ -128,17 +128,9 @@ var (
 				err = s.Delete(fixture.ID)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				var items []*Scheme
-
-				err = tx.Model(&items).Where("scheme_id = ?", fixture.ID).Select()
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(items).To(HaveLen(1))
-
-				for i, item := range items {
-					g.Expect(item.Version).To(BeEquivalentTo(i + 1))
-					g.Expect(item.Tags).To(BeEquivalentTo(fixture.Tags))
-					g.Expect(item.Data).To(BeEquivalentTo(fixture.Data))
-				}
+				item, err := s.Read(fixture.ID)
+				g.Expect(err).To(HaveOccurred()) // not found
+				g.Expect(item).To(BeNil())
 
 				return rollback
 			},
@@ -198,41 +190,6 @@ var (
 		},
 	}
 )
-
-func TestSchemes_Create(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	h, err := helium.New(&helium.Settings{
-		File:   "../config.yml",
-		Prefix: "TEST",
-	}, testModule)
-
-	g.Expect(err).NotTo(HaveOccurred())
-
-	g.Expect(h.Invoke(func(db *pg.DB) {
-
-		err := db.RunInTransaction(func(tx *pg.Tx) error {
-			s := &schemes{db: tx}
-			err := s.Create(&Scheme{
-				Version: 0,
-				Tags:    []string{"a", "b", "c"},
-				Data:    json.RawMessage(`{"hello": "world"}`),
-			})
-
-			g.Expect(err).NotTo(HaveOccurred())
-
-			var model Scheme
-
-			err = tx.Model(&model).Limit(1).Select()
-			g.Expect(err).NotTo(HaveOccurred())
-
-			return rollback
-		})
-
-		g.Expect(err).To(BeEquivalentTo(rollback))
-
-	})).NotTo(HaveOccurred())
-}
 
 func TestSchemes(t *testing.T) {
 	g := NewGomegaWithT(t)

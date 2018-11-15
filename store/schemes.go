@@ -3,7 +3,6 @@ package store
 import (
 	"encoding/json"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/go-pg/pg"
 	"github.com/im-kulikov/simplinic-task/models"
 	"github.com/pkg/errors"
@@ -29,7 +28,6 @@ func (s *schemes) Create(scheme *Scheme) error {
 	scheme.ID = model.ID
 
 	if _, err := s.db.Model(scheme).Insert(); err != nil {
-		spew.Dump(err)
 		return errors.WithMessage(err, "could not create scheme data")
 	}
 
@@ -40,8 +38,10 @@ func (s *schemes) Read(id int64) (*Scheme, error) {
 	var result Scheme
 
 	if err := s.db.Model(&result).
-		Where("scheme_id = ?", id).
-		Order("created_at DESC", "version DESC").
+		Join("LEFT JOIN schemes s"). // LEFT JOIN configs c ON c.id = cv.config_id
+		JoinOn("s.id = sv.scheme_id").
+		Where("s.id = ? AND s.deleted_at ISNULL", id).
+		Order("sv.created_at DESC", "sv.version DESC").
 		Limit(1).
 		Select(); err != nil {
 		return nil, errors.Wrapf(err, "could not read scheme #%d", id)
@@ -73,7 +73,6 @@ func (s *schemes) Update(scheme *Scheme) error {
 		return errors.WithMessage(err, "can't create scheme")
 	}
 
-	//return
 	return nil
 }
 

@@ -29,6 +29,7 @@ CREATE INDEX schemes__deleted ON public.schemes USING btree (deleted_at) WHERE d
 CREATE INDEX scheme_versions__data ON public.scheme_versions USING gin (data);
 CREATE INDEX scheme_versions__tags ON public.scheme_versions USING gin (tags);
 CREATE INDEX scheme_versions__version ON public.scheme_versions USING btree (version);
+CREATE INDEX scheme_versions__version_desc ON public.scheme_versions USING btree (version DESC);
 CREATE INDEX scheme_versions__created_at ON public.scheme_versions USING btree (created_at);
 CREATE INDEX scheme_versions__created_at_desc ON public.scheme_versions USING btree (created_at DESC);
 

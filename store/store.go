@@ -4,7 +4,6 @@ import (
 	"github.com/go-pg/pg"
 	"github.com/go-pg/pg/orm"
 	"github.com/im-kulikov/helium/module"
-	"github.com/im-kulikov/simplinic-task/models"
 )
 
 type (
@@ -27,11 +26,11 @@ type (
 	}
 
 	Configs interface {
-		Create(cfg *models.Config) error
-		Read(id int64) (*models.Config, error)
-		Update(cfg *models.Config) error
-		Delete(cfg *models.Config) error
-		Search(req *SearchRequest) ([]*models.Config, error)
+		Create(cfg *Config) error
+		Read(id int64) (*Config, error)
+		Update(cfg *Config) error
+		Delete(id int64) error
+		Search(req SearchRequest) ([]*Config, error)
 	}
 
 	store struct {
