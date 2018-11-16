@@ -13,8 +13,8 @@ type (
 		tableName struct{}        `sql:"scheme_versions,alias:sv" pg:",discard_unknown_columns"`
 		ID        int64           `sql:"scheme_id" json:"id"`
 		Version   int64           `json:"version"`
-		Tags      []string        `json:"tags"`
-		Data      json.RawMessage `json:"data"`
+		Tags      []string        `json:"tags" validate:"required" message:"tags could not be empty'"`
+		Data      json.RawMessage `json:"data" validate:"required" message:"data could not be empty'"`
 	}
 )
 
@@ -53,16 +53,24 @@ func (s *schemes) Read(id int64) (*Scheme, error) {
 func (s *schemes) Update(scheme *Scheme) error {
 	var id, version int64
 
-	if err := s.db.Model((*models.Scheme)(nil)).
-		ColumnExpr("id, version").
-		Join("LEFT JOIN scheme_versions sv").
-		JoinOn("sv.scheme_id = scheme.id").
-		Where("id = ? AND deleted_at ISNULL", scheme.ID).
-		Order("sv.version DESC").
-		Limit(1).
+	// Example:
+	//    SELECT sv.scheme_id, MAX(sv.version)
+	//      FROM scheme_versions AS sv
+	// LEFT JOIN schemes s
+	//        ON s.id = sv.scheme_id
+	//     WHERE sv.scheme_id = 3
+	//       AND s.deleted_at ISNULL
+	//  GROUP BY "sv"."scheme_id"
+
+	if err := s.db.Model((*Scheme)(nil)).
+		ColumnExpr("sv.scheme_id, MAX(sv.version)").
+		Join("LEFT JOIN schemes s").
+		JoinOn("s.id = sv.scheme_id").
+		Where("sv.scheme_id = ? AND s.deleted_at ISNULL", scheme.ID).
+		Group("sv.scheme_id").
 		Select(pg.Scan(&id, &version)); err != nil {
-		return errors.Wrapf(err, "could not update scheme #%d", scheme.ID)
-	} else if id != scheme.ID {
+		return errors.Wrapf(err, "query error for scheme #%d", scheme.ID)
+	} else if id == 0 {
 		return errors.Errorf("could not update scheme #%d, not found", scheme.ID)
 	}
 
@@ -88,7 +96,6 @@ func (s *schemes) Search(req SearchRequest) ([]*Scheme, error) {
 	var result []*Scheme
 
 	q := s.db.Model(&result).
-		ColumnExpr("sv.*").
 		Join("LEFT JOIN schemes s").
 		JoinOn("s.id = sv.scheme_id").
 		Order("version DESC").

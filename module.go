@@ -10,7 +10,6 @@ import (
 	"github.com/im-kulikov/helium/web"
 	"github.com/im-kulikov/helium/workers"
 	"github.com/im-kulikov/simplinic-task/api"
-	"github.com/im-kulikov/simplinic-task/store"
 )
 
 var Module = module.Module{
@@ -27,6 +26,5 @@ var Module = module.Module{
 	redis.Module,      // Redis
 	orm.Module,        // Postgres
 	// App specific modules:
-	api.Module,   // API router
-	store.Module, // Store module
+	api.Module, // API router
 )

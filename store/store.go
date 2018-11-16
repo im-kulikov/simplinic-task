@@ -2,16 +2,10 @@ package store
 
 import (
 	"github.com/go-pg/pg"
-	"github.com/go-pg/pg/orm"
 	"github.com/im-kulikov/helium/module"
 )
 
 type (
-	Store interface {
-		Schemes() Schemes
-		Configs() Configs
-	}
-
 	SearchRequest struct {
 		Version int64    `json:"version"`
 		Tags    []string `json:"tags"`
@@ -33,31 +27,24 @@ type (
 		Search(req SearchRequest) ([]*Config, error)
 	}
 
-	store struct {
+	schemes struct {
 		db *pg.DB
 	}
 
-	schemes struct {
-		db orm.DB
-	}
-
 	configs struct {
-		db orm.DB
+		db *pg.DB
 	}
 )
 
 var Module = module.Module{
-	{Constructor: newStore},
+	{Constructor: NewSchemeStore},
+	{Constructor: NewConfigStore},
 }
 
-func newStore(db *pg.DB) Store {
-	return &store{db: db}
+func NewSchemeStore(db *pg.DB) Schemes {
+	return &schemes{db: db}
 }
 
-func (s *store) Schemes() Schemes {
-	return &schemes{db: s.db}
-}
-
-func (s *store) Configs() Configs {
-	return &configs{db: s.db}
+func NewConfigStore(db *pg.DB) Configs {
+	return &configs{db: db}
 }

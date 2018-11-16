@@ -11,44 +11,20 @@ import (
 type Config struct {
 	tableName struct{}        `sql:"config_versions,alias:cv" pg:",discard_unknown_columns"`
 	ID        int64           `sql:"config_id" json:"id"`
-	SchemeID  int64           `json:"scheme_id"`
+	SchemeID  int64           `json:"scheme_id" validate:"required,gt=0" message:"scheme_id could not be empty"`
 	Version   int64           `json:"version"`
-	Tags      []string        `json:"tags"`
-	Data      json.RawMessage `json:"data"`
+	Tags      []string        `json:"tags" validate:"required" message:"tags could not be empty"`
+	Data      json.RawMessage `json:"data" validate:"required" message:"data could not be empty"`
 }
 
 func (s *configs) Create(cfg *Config) error {
-	var (
-		id, version int64
-		model       = models.Config{SchemeID: cfg.SchemeID}
-	)
+	var model = models.Config{SchemeID: cfg.ID}
 
-	if err := s.db.
-		Model((*models.Scheme)(nil)).
-		Column("c.id", "cv.version").
-		Join("LEFT JOIN scheme_versions sv"). // LEFT JOIN scheme_versions sv ON sv.scheme_id = scheme.id
-		JoinOn("sv.scheme_id = scheme.id").
-		Join("LEFT JOIN configs c"). // LEFT JOIN configs c ON c.scheme_id = scheme.id
-		JoinOn("c.id = scheme.id").
-		Join("LEFT JOIN config_versions cv"). // LEFT JOIN config_versions cv ON cv.scheme_id = scheme.id
-		JoinOn("cv.scheme_id = scheme.id").
-		Where("scheme.id = ? AND scheme.deleted_at ISNULL AND c.deleted_at ISNULL", cfg.SchemeID).
-		Order("cv.version DESC").
-		Limit(1).
-		Select(pg.Scan(&id, &version)); err != nil {
-		return errors.Wrapf(err, "query error for find scheme #%d", cfg.SchemeID)
-	} else if id == 0 { // we not find any config for current scheme
-		// that's why we create new record...
-		if _, err := s.db.Model(&model).Insert(); err != nil {
-			return errors.Wrapf(err, "could not create config (scheme#%d)", cfg.SchemeID)
-		}
-
-		// set new config.id
-		id = model.ID
+	if _, err := s.db.Model(&model).Insert(); err != nil {
+		return errors.WithMessage(err, "could not create config")
 	}
 
-	cfg.ID = id               // config_id = id
-	cfg.Version = version + 1 // version++
+	cfg.ID = model.ID
 
 	// create new config_versions..
 	if _, err := s.db.Model(cfg).Insert(); err != nil {
@@ -75,21 +51,32 @@ func (s *configs) Read(id int64) (*Config, error) {
 }
 
 func (s *configs) Update(cfg *Config) error {
-	var cid, sid, version int64
+	var sid, version int64
 
-	if err := s.db.Model((*models.Config)(nil)).
-		Column("config.id", "s.id", "cv.version").
-		Join("LEFT JOIN schemes s"). // LEFT JOIN schemes s ON s.id = config.scheme_id
-		JoinOn("s.id = config.scheme_id").
-		Join("LEFT JOIN config_versions cv"). // LEFT JOIN schemes s ON s.id = config.scheme_id
-		JoinOn("cv.scheme_id = config.scheme_id").
-		Where("config.id = ? AND config.deleted_at ISNULL AND s.deleted_at ISNULL", cfg.ID).
-		Order("cv.version DESC").
-		Limit(1).
-		Select(pg.Scan(&cid, &sid, &version)); err != nil {
+	// Example:
+	//   SELECT MAX(cv.version) as version
+	//     FROM config_versions cv
+	//LEFT JOIN configs c
+	//       ON cv.config_id = c.id
+	//LEFT JOIN schemes s
+	//       ON cv.scheme_id = c.scheme_id
+	//    WHERE cv.config_id = 3
+	//      AND cv.scheme_id = 10
+	//      AND c.deleted_at ISNULL
+	//      AND s.deleted_at ISNULL
+	// GROUP BY c.id;
+
+	if err := s.db.
+		Model((*Config)(nil)).
+		ColumnExpr("cv.scheme_id, MAX(cv.version) as version").
+		Join("LEFT JOIN configs c").JoinOn("c.id = cv.config_id").
+		Join("LEFT JOIN schemes s").JoinOn("s.id = cv.scheme_id").
+		Where("cv.config_id = ? AND c.deleted_at ISNULL AND s.deleted_at ISNULL", cfg.ID).
+		Group("cv.config_id", "cv.scheme_id").
+		Select(pg.Scan(&sid, &version)); err != nil {
 		return errors.Wrapf(err, "query error for config #%d", cfg.ID)
-	} else if cid != cfg.ID {
-		return errors.Errorf("could not update scheme #%d or config #%d not found", cfg.SchemeID, cfg.ID)
+	} else if version == 0 || sid == 0 {
+		return errors.Errorf("could not update config #%d not found", cfg.ID)
 	}
 
 	cfg.SchemeID = sid
@@ -115,7 +102,6 @@ func (s *configs) Search(req SearchRequest) ([]*Config, error) {
 	var result []*Config
 
 	q := s.db.Model(&result).
-		ColumnExpr("cv.*").
 		Join("LEFT JOIN configs c").
 		JoinOn("c.id = cv.config_id").
 		Order("version DESC").

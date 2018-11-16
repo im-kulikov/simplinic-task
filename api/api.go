@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/im-kulikov/helium/module"
@@ -11,13 +12,45 @@ import (
 	"go.uber.org/zap"
 )
 
-type router struct {
-	dig.In
+type (
+	router struct {
+		dig.In
 
-	Echo   *echo.Echo
-	Logger *zap.Logger
-	Store  store.Store
-}
+		Echo   *echo.Echo
+		Logger *zap.Logger
+		Scheme store.Schemes
+		Config store.Configs
+	}
+
+	idRequest struct {
+		ID int64 `param:"id" validate:"required,gt=0" message:"id could not be empty"`
+	}
+
+	updateConfigRequest struct {
+		ID       int64           `json:"id" validate:"required,gt=0" message:"id could not be empty"`
+		SchemeID int64           `json:"scheme_id" validate:"required,gt=0" message:"scheme_id could not be empty"`
+		Version  int64           `query:"version"`
+		Tags     []string        `query:"tags" validate:"required" message:"tags could not be empty"`
+		Data     json.RawMessage `query:"data" validate:"required" message:"data could not be empty"`
+	}
+
+	updateRequest struct {
+		ID      int64           `json:"id" validate:"required,gt=0" message:"id could not be empty"`
+		Version int64           `query:"version"`
+		Tags    []string        `query:"tags" validate:"required" message:"tags could not be empty"`
+		Data    json.RawMessage `query:"data" validate:"required" message:"data could not be empty"`
+	}
+
+	searchRequest struct {
+		Version int64    `query:"version"`
+		Tags    []string `query:"tags" validate:"required" message:"tags could not be empty"`
+	}
+
+	searchResponse struct {
+		Total int           `json:"total"`
+		Items []interface{} `json:"items"`
+	}
+)
 
 var Module = module.Module{
 	{Constructor: newRouter}, // connect router
@@ -30,18 +63,18 @@ func newRouter(r router) http.Handler {
 
 	// app routes:
 	s := e.Group("/schemes")
-	s.POST("/", createScheme(r.Store.Schemes()))
-	s.GET("/", listSchemes(r.Store.Schemes()))
-	s.GET("/:id", getScheme(r.Store.Schemes()))
-	s.PUT("/:id", updateScheme(r.Store.Schemes()))
-	s.DELETE("/:id", deleteScheme(r.Store.Schemes()))
+	s.POST("/", createScheme(r.Scheme))
+	s.GET("/", listSchemes(r.Scheme))
+	s.GET("/:id", getScheme(r.Scheme))
+	s.PUT("/:id", updateScheme(r.Scheme))
+	s.DELETE("/:id", deleteScheme(r.Scheme))
 
 	c := e.Group("/configs")
-	c.POST("/", createConfig(r.Store.Configs()))
-	c.GET("/", listConfigs(r.Store.Configs()))
-	c.GET("/:id", getConfig(r.Store.Configs()))
-	c.PUT("/:id", updateConfig(r.Store.Configs()))
-	c.DELETE("/:id", deleteConfig(r.Store.Configs()))
+	c.POST("/", createConfig(r.Config))
+	c.GET("/", listConfigs(r.Config))
+	c.GET("/:id", getConfig(r.Config))
+	c.PUT("/:id", updateConfig(r.Config))
+	c.DELETE("/:id", deleteConfig(r.Config))
 	// -------- //
 
 	return e
