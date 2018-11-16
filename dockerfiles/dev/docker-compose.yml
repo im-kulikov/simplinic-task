@@ -1,0 +1,67 @@
+version: '2.4'
+
+networks:
+  default:
+    name: neofs-base-net
+
+services:
+
+  serve:
+    build:
+      context: ../../
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      migrations:
+        condition: service_started
+    ports:
+      - 8080:8080
+    environment:
+      - CFG_REDIS_ADDRESS=redis:6379
+      - CFG_POSTGRES_ADDRESS=postgres:5432
+      - CFG_POSTGRES_DATABASE=simplinic-task
+      - CFG_POSTGRES_USERNAME=postgres
+      - CFG_POSTGRES_PASSWORD=postgres
+
+  postgres:
+    image: postgres:alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: simplinic-task
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 60s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:4.0.11-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli","ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 60
+
+  migrations:
+    build:
+      context: ../../
+      dockerfile: Dockerfile.migrate
+    container_name: dev_migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: "all up"
+    environment:
+      MIGA_SEED_PATH: "/seeds"
+      MIGA_POSTGRES_USER: postgres
+      MIGA_POSTGRES_PASSWORD: postgres
+      MIGA_POSTGRES_HOST: postgres
+      MIGA_POSTGRES_PORT: 5432
+      MIGA_POSTGRES_DB: simplinic-task
+      MIGA_POSTGRES_OPTIONS: sslmode=disable
+      MIGA_DRIVER: impg
+      MIGA_SEED_TABLE_NAME: seeds
+      MIGA_MIGRATE_TABLE_NAME: migrations

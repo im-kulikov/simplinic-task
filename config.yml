@@ -16,10 +16,11 @@ logger:
   format: console
 
 workers:
-  users_sync:
-    ticker: 30s
-    expire: 1h
-    immediately: true
+# Example:
+#  users_sync:
+#    ticker: 30s
+#    expire: 1h
+#    immediately: true
 
 postgres:
   address: localhost:5432

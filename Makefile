@@ -1,4 +1,7 @@
-.PHONY: help tests
+NAME ?= serve
+DEV_COMPOSE = dockerfiles/dev/docker-compose.yml
+
+.PHONY: help tests db_up db_down tests serve
 
 # Show this help prompt
 help:
@@ -30,3 +33,44 @@ db_down:
 # Run local server
 serve:
 	@go run cmd/serve/main.go
+
+.PHONY: dev_up dev_down dev_logs dev_deploy dev_restart
+# Up dev environment
+dev_up: COMPOSE_FILE=$(DEV_COMPOSE)
+dev_up: env_up
+
+# Stop and remove dev environment
+dev_down: COMPOSE_FILE=$(DEV_COMPOSE)
+dev_down: env_down
+
+# Show logs of dev environment
+dev_logs: COMPOSE_FILE=$(DEV_COMPOSE)
+dev_logs: env_logs
+
+# Deploy $(NAME) service of dev environment
+dev_deploy: COMPOSE_FILE=$(DEV_COMPOSE)
+dev_deploy: env_deploy
+
+# Restart dev environment
+dev_restart: COMPOSE_FILE=$(DEV_COMPOSE)
+dev_restart: env_restart
+
+# IGNORE
+env_up:
+	time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
+
+# IGNORE
+env_restart:
+	time docker-compose -f $(COMPOSE_FILE) restart
+
+# IGNORE
+env_deploy:
+	time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
+
+# IGNORE
+env_down:
+	time docker-compose -f $(COMPOSE_FILE) down
+
+# IGNORE
+env_logs:
+	time docker-compose -f $(COMPOSE_FILE) logs -f --tail 100

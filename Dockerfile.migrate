@@ -1,0 +1,3 @@
+FROM chapsuk/miga:v0.6.0
+COPY ./seeds      ./seeds
+COPY ./migrations ./migrations
