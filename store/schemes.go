@@ -13,8 +13,8 @@ type (
 		tableName struct{}        `sql:"scheme_versions,alias:sv" pg:",discard_unknown_columns"`
 		ID        int64           `sql:"scheme_id" json:"id"`
 		Version   int64           `json:"version"`
-		Tags      []string        `json:"tags" validate:"required" message:"tags could not be empty'"`
-		Data      json.RawMessage `json:"data" validate:"required" message:"data could not be empty'"`
+		Tags      []string        `json:"tags" validate:"required" message:"tags could not be empty"`
+		Data      json.RawMessage `json:"data" validate:"required" message:"data could not be empty"`
 	}
 )
 
