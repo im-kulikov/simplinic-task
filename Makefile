@@ -1,5 +1,6 @@
 NAME ?= serve
 DEV_COMPOSE = dockerfiles/dev/docker-compose.yml
+TEST_COMPOSE = dockerfiles/test/docker-compose.yml
 
 .PHONY: help tests db_up db_down tests serve
 
@@ -19,7 +20,8 @@ image:
 
 # Run golang tests
 tests:
-	@go test -v ./...
+	@export CGO_ENABLED=0
+	@go test -mod=vendor -v ./...
 
 # Migrate to newest migrations / seeds
 db_up:
@@ -32,7 +34,13 @@ db_down:
 
 # Run local server
 serve:
-	@go run cmd/serve/main.go
+	@go run -mod=vendor cmd/serve/main.go
+
+.PHONY: ci
+# Run tests in docker environment
+ci: COMPOSE_FILE=$(TEST_COMPOSE)
+ci: NAME=tests
+ci: env_run
 
 .PHONY: dev_up dev_down dev_logs dev_deploy dev_restart
 # Up dev environment
@@ -57,20 +65,24 @@ dev_restart: env_restart
 
 # IGNORE
 env_up:
-	time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
+	@time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
+
+# IGNORE
+env_run:
+	@time docker-compose -f $(COMPOSE_FILE) up --build $(NAME)
 
 # IGNORE
 env_restart:
-	time docker-compose -f $(COMPOSE_FILE) restart
+	@time docker-compose -f $(COMPOSE_FILE) restart
 
 # IGNORE
 env_deploy:
-	time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
+	@time docker-compose -f $(COMPOSE_FILE) up --build -d $(NAME)
 
 # IGNORE
 env_down:
-	time docker-compose -f $(COMPOSE_FILE) down
+	@time docker-compose -f $(COMPOSE_FILE) down
 
 # IGNORE
 env_logs:
-	time docker-compose -f $(COMPOSE_FILE) logs -f --tail 100
+	@time docker-compose -f $(COMPOSE_FILE) logs -f --tail 100

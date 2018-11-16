@@ -8,10 +8,10 @@ import (
 type jobs struct {
 	dig.In
 
-	//
+	// fii dependencies
 }
 
-func newJobs() map[string]worker.Job {
+func newJobs(j jobs) map[string]worker.Job {
 	return map[string]worker.Job{
 		// fill workers map:
 	}

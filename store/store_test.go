@@ -29,13 +29,6 @@ var _ = Describe("Store Suite", func() {
 
 	BeforeSuite(func() {
 		var err error
-
-		//err = os.Setenv("TEST_POSTGRES_DEBUG", "false")
-		//Expect(err).NotTo(HaveOccurred())
-		//
-		//err = os.Setenv("TEST_LOGGER_LEVEL", "info")
-		//Expect(err).NotTo(HaveOccurred())
-
 		h, err := helium.New(&helium.Settings{
 			File:   "../config.yml",
 			Prefix: "TEST",

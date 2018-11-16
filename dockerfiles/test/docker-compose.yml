@@ -2,13 +2,14 @@ version: '2.4'
 
 networks:
   default:
-    name: simplinic-task-dev-net
+    name: simplinic-task-test-net
 
 services:
 
-  serve:
+  tests:
     build:
       context: ../../
+      dockerfile: Dockerfile.tests
     depends_on:
       redis:
         condition: service_healthy
@@ -16,14 +17,14 @@ services:
         condition: service_healthy
       migrations:
         condition: service_started
-    ports:
-      - 8080:8080
     environment:
-      - CFG_REDIS_ADDRESS=redis:6379
-      - CFG_POSTGRES_ADDRESS=postgres:5432
-      - CFG_POSTGRES_DATABASE=simplinic-task
-      - CFG_POSTGRES_USERNAME=postgres
-      - CFG_POSTGRES_PASSWORD=postgres
+      - TEST_REDIS_ADDRESS=redis:6379
+      - TEST_POSTGRES_ADDRESS=postgres:5432
+      - TEST_POSTGRES_DATABASE=simplinic-task
+      - TEST_POSTGRES_USERNAME=postgres
+      - TEST_POSTGRES_PASSWORD=postgres
+      - TEST_LOGGER_LEVEL=info
+      - TEST_POSTGRES_DEBUG=false
 
   postgres:
     image: postgres:alpine

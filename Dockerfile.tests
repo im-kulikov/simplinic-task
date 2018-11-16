@@ -1,0 +1,7 @@
+FROM golang:1.11
+
+COPY . /simplinic-task
+
+WORKDIR /simplinic-task
+
+CMD ["make", "tests"]
