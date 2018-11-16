@@ -53,8 +53,10 @@ type (
 )
 
 var Module = module.Module{
-	{Constructor: newRouter}, // connect router
-}.Append()
+	{Constructor: newRouter},            // connect router
+	{Constructor: store.NewSchemeStore}, // to work with schemes
+	{Constructor: store.NewConfigStore}, // to work with configs
+}
 
 func newRouter(r router) http.Handler {
 	e := r.Echo
@@ -65,16 +67,16 @@ func newRouter(r router) http.Handler {
 	s := e.Group("/schemes")
 	s.POST("/", createScheme(r.Scheme))
 	s.GET("/", listSchemes(r.Scheme))
-	s.GET("/:id", getScheme(r.Scheme))
-	s.PUT("/:id", updateScheme(r.Scheme))
-	s.DELETE("/:id", deleteScheme(r.Scheme))
+	s.GET("/:id/", getScheme(r.Scheme))
+	s.PUT("/:id/", updateScheme(r.Scheme))
+	s.DELETE("/:id/", deleteScheme(r.Scheme))
 
 	c := e.Group("/configs")
 	c.POST("/", createConfig(r.Config))
 	c.GET("/", listConfigs(r.Config))
-	c.GET("/:id", getConfig(r.Config))
-	c.PUT("/:id", updateConfig(r.Config))
-	c.DELETE("/:id", deleteConfig(r.Config))
+	c.GET("/:id/", getConfig(r.Config))
+	c.PUT("/:id/", updateConfig(r.Config))
+	c.DELETE("/:id/", deleteConfig(r.Config))
 	// -------- //
 
 	return e

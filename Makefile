@@ -10,6 +10,10 @@ help:
 	@echo ''
 	@awk '/^#/{ comment = substr($$0,3) } comment && /^[a-zA-Z][a-zA-Z0-9_-]+ ?:/{ print "   ", $$1, comment }' $(MAKEFILE_LIST) | column -t -s ':' | grep -v 'IGNORE' | sort | uniq
 
+# Make docker image
+image:
+	@docker build -t simplinic-task .
+
 # Run golang tests
 tests:
 	@go test -v ./...
